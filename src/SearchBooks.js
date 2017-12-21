@@ -1,27 +1,61 @@
 import React, {Component} from 'react';
 import {Link} from 'react-router-dom';
+import Book from "./Book";
+import * as BooksAPI from './BooksAPI'
 
 class SearchBooks extends Component {
+    state = {
+        query: '',
+        showingBooks: []
+    }
+
+    updateQuery = (newQuery) => {
+        const {books} = this.props;
+        this.setState({query: newQuery});
+
+        if (!newQuery) {
+            return;
+        }
+
+        BooksAPI.search(newQuery).then(result => {
+            if ('error' in result) {
+                this.setState({showingBooks: []});
+            } else {
+                let showingBooks = result;
+                let booksOnShelvesIds = this.props.books.map(b => b.id);
+                for (let b of showingBooks) {
+                    if (booksOnShelvesIds.includes(b.id)) {
+                        b.shelf = books.filter(bookFromShelf => bookFromShelf.id === b.id).shelf;
+                    }
+                }
+                this.setState({showingBooks: showingBooks});
+            }
+        });
+    }
+
     render() {
+        const {query, showingBooks} = this.state;
+        const {changeBookshelf} = this.props;
+
         return (
             <div className="search-books">
                 <div className="search-books-bar">
                     <Link to="/" className="close-search">Close</Link>
                     <div className="search-books-input-wrapper">
-                        {/*
-                  NOTES: The search from BooksAPI is limited to a particular set of search terms.
-                  You can find these search terms here:
-                  https://github.com/udacity/reactnd-project-myreads-starter/blob/master/SEARCH_TERMS.md
-
-                  However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
-                  you don't find a specific author or title. Every search is limited by search terms.
-                */}
-                        <input type="text" placeholder="Search by title or author"/>
-
+                        <input type="text"
+                               placeholder="Search by title or author"
+                               value={query}
+                               onChange={(event) => this.updateQuery(event.target.value.trim())}/>
                     </div>
                 </div>
                 <div className="search-books-results">
-                    <ol className="books-grid"></ol>
+                    {showingBooks && (
+                        <ol className="books-grid">
+                            {showingBooks.map(book => <Book key={book.id}
+                                                            book={book}
+                                                            changeBookshelf={changeBookshelf}/>)}
+                        </ol>
+                    )}
                 </div>
             </div>
         )
